@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  color: white;
+  background: #0B1120;
+  background-image: radial-gradient(at 47% 33%, hsl(218.00, 100%, 15%) 0, transparent 59%), radial-gradient(at 82% 65%, hsl(267.00, 89%, 18%) 0, transparent 55%);
+}
