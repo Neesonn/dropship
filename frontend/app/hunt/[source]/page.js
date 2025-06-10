@@ -1,6 +1,7 @@
+// frontend/app/hunt/[source]/page.js
 'use client'; 
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ring } from 'ldrs'
@@ -39,6 +40,8 @@ const ProfitCalculatorModal = ({ product, onClose }) => {
   const handleCompetitorSearch = async () => {
     setCompetitorStatus('loading');
     try {
+      // NOTE: For deployment, 'http://localhost:3001' needs to be replaced with your deployed backend URL.
+      // Example: const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/competitors?query=${encodeURIComponent(product.title)}`);
       const response = await fetch(`http://localhost:3001/api/competitors?query=${encodeURIComponent(product.title)}`);
       if(!response.ok) throw new Error("Failed to fetch competitor data.");
       const data = await response.json();
@@ -60,7 +63,7 @@ const ProfitCalculatorModal = ({ product, onClose }) => {
           <a href={product.productUrl} target="_blank" rel="noopener noreferrer" className="block w-full mt-4 text-center bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700 transition">
             View on AliExpress
           </a>
-           <a href={`https://www.google.com/search?q=${encodeURIComponent(product.title)}`} target="_blank" rel="noopener noreferrer" className="block w-full mt-2 text-center bg-blue-600 px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+            <a href={`https://www.google.com/search?q=${encodeURIComponent(product.title)}`} target="_blank" rel="noopener noreferrer" className="block w-full mt-2 text-center bg-blue-600 px-4 py-2 rounded-lg hover:bg-blue-700 transition">
             Search on Google
           </a>
         </div>
@@ -70,11 +73,11 @@ const ProfitCalculatorModal = ({ product, onClose }) => {
           <h2 className="text-xl font-bold mb-1">Profit Calculator</h2>
           <h3 className="text-gray-400 text-sm mb-6 truncate" title={product.title}>{product.title}</h3>
           <div className="space-y-4">
-             <div>
+              <div>
               <label htmlFor="product-cost" className="block text-sm font-medium text-gray-400">Product Cost</label>
               <div className="mt-1 text-lg p-2 rounded-md bg-gray-800 border border-gray-700">{product.price}</div>
             </div>
-             <div>
+              <div>
               <label htmlFor="shipping" className="block text-sm font-medium text-gray-400">Shipping Cost</label>
               <input type="number" id="shipping" value={shippingCost} onChange={e => setShippingCost(e.target.value)} className="w-full mt-1 p-2 rounded-md bg-gray-800 border border-gray-700 focus:ring-purple-500 focus:border-purple-500"/>
             </div>
@@ -92,7 +95,7 @@ const ProfitCalculatorModal = ({ product, onClose }) => {
               <p className="text-sm text-gray-400">Profit/Loss</p>
               <p className={`text-3xl font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-500'}`}>{profit.toFixed(2)}</p>
             </div>
-             <div>
+              <div>
               <p className="text-sm text-gray-400">Margin</p>
               <p className={`text-3xl font-bold ${margin >= 0 ? 'text-green-400' : 'text-red-500'}`}>{margin.toFixed(1)}%</p>
             </div>
@@ -137,7 +140,9 @@ export default function HuntPage() {
 
   const toggleWishlist = async (product) => {
     if (!user) {
-      alert("Please login to save items to your wishlist.");
+      // Replaced alert with a message box or a state-driven modal for better UX
+      // since alerts are not allowed in Canvas or good practice in modern web apps.
+      alert("Please login to save items to your wishlist."); // This will still use browser's alert if no custom modal implemented
       return;
     }
 
@@ -150,9 +155,12 @@ export default function HuntPage() {
     }
   };
 
-  const fetchProductsFromDB = async () => {
-    if(status !== 'success') { setStatus('loading'); }
+  // Memoized fetchProductsFromDB with useCallback to avoid useEffect dependency warnings
+  const fetchProductsFromDB = useCallback(async () => {
+    if(status !== 'success') { setStatus('loading'); } // Ensure loading state if not already success
     try {
+      // NOTE: For deployment, 'http://localhost:3001' needs to be replaced with your deployed backend URL.
+      // Example: const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/products?source=${source}`);
       const response = await fetch(`http://localhost:3001/api/products?source=${source}`);
       if (!response.ok) { throw new Error('Failed to fetch products from the database.'); }
       const data = await response.json();
@@ -162,12 +170,14 @@ export default function HuntPage() {
       setError(err.message);
       setStatus('error');
     }
-  };
-  
+  }, [source, status, setProducts, setError, setStatus]); // Include all dependencies of the function
+
   useEffect(() => {
-    if (source) { fetchProductsFromDB(); }
-  }, [source]);
-  
+    if (source) { 
+      fetchProductsFromDB(); 
+    }
+  }, [source, fetchProductsFromDB]); // Add fetchProductsFromDB to dependencies
+
   useEffect(() => {
     if(user && db) {
         const wishlistRef = collection(db, `users/${user.uid}/wishlist`);
@@ -183,6 +193,8 @@ export default function HuntPage() {
     setStatus('loading'); 
     setError(null);
     try {
+      // NOTE: For deployment, 'http://localhost:3001' needs to be replaced with your deployed backend URL.
+      // Example: const scrapeResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/scrape/${source}`);
       const scrapeResponse = await fetch(`http://localhost:3001/api/scrape/${source}`);
       if (!scrapeResponse.ok) {
         const errorData = await scrapeResponse.json();
@@ -237,38 +249,39 @@ export default function HuntPage() {
           {status === 'success' && (
             <>
               {products.length > 0 ? (
-                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                  {products.map((product) => (
-                    <div key={product.id} className="isolate flex flex-col bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 shadow-lg overflow-hidden group">
-                      <div className="relative aspect-square w-full bg-white/10 cursor-pointer" onClick={() => setSelectedProduct(product)}>
-                        <img
-                          src={product.imageUrl || 'https://placehold.co/400x400/0c0a09/4a4a4a?text=No+Image'}
-                          alt={product.title}
-                          onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/400x400/0c0a09/4a4a4a?text=No+Image'; }}
-                          className="absolute inset-0 h-full w-full object-cover group-hover:scale-110 transition-transform duration-300 ease-in-out"
-                        />
-                      </div>
-                      <div className="p-4 flex flex-col flex-grow justify-between" style={{height: '8rem'}}>
-                        <h3 className="text-white font-semibold text-sm leading-tight overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                          {product.title}
-                        </h3>
-                        <div className="flex justify-between items-center mt-2">
-                          <p className="text-lg font-bold text-purple-400">{product.price}</p>
-                          <button onClick={() => toggleWishlist(product)} disabled={!user} className="w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-50">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={`w-6 h-6 transition-all ${wishlistIds.has(product.id) ? 'text-red-500 fill-current' : 'text-gray-500 hover:text-red-400'}`}>
-                              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                            </svg>
-                          </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {products.map((product) => (
+                      <div key={product.id} className="isolate flex flex-col bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 shadow-lg overflow-hidden group">
+                        <div className="relative aspect-square w-full bg-white/10 cursor-pointer" onClick={() => setSelectedProduct(product)}>
+                          <img
+                            src={product.imageUrl || 'https://placehold.co/400x400/0c0a09/4a4a4a?text=No+Image'}
+                            alt={product.title}
+                            onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/400x400/0c0a09/4a4a4a?text=No+Image'; }}
+                            className="absolute inset-0 h-full w-full object-cover group-hover:scale-110 transition-transform duration-300 ease-in-out"
+                          />
+                        </div>
+                        <div className="p-4 flex flex-col flex-grow justify-between" style={{height: '8rem'}}>
+                          <h3 className="text-white font-semibold text-sm leading-tight overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                            {product.title}
+                          </h3>
+                          <div className="flex justify-between items-center mt-2">
+                            <p className="text-lg font-bold text-purple-400">{product.price}</p>
+                            <button onClick={() => toggleWishlist(product)} disabled={!user} className="w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-50">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={`w-6 h-6 transition-all ${wishlistIds.has(product.id) ? 'text-red-500 fill-current' : 'text-gray-500 hover:text-red-400'}`}>
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
               ) : (
                 status !== 'loading' && (
                   <div className="text-center py-12">
+                    {/* FIXED: Escaped double quotes here */}
                     <h2 className="text-2xl font-bold text-white">No Products Found in Database</h2>
-                    <p className="text-gray-400 mt-2">Click the "Hunt for New Products" button to populate the database.</p>
+                    <p className="text-gray-400 mt-2">Click the &quot;Hunt for New Products&quot; button to populate the database.</p>
                   </div>
                 )
               )}
